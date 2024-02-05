@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="./css/reset.css" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div class="container">
+      <header id="header">
+        <nav>
+          <h1>画像CROP</h1>
+        </nav>
+      </header>
+
+      <main>
+        <!-- <button
+          onclick="load_img('https://lh3.ggpht.com/O0aW5qsyCkR2i7Bu-jUU1b5BWA_NygJ6ui4MgaAvL7gfqvVWqkOBscDaq4pn-vkwByUx=w300')"
+        >
+          A
+        </button>
+        <button
+          onclick="load_img('https://www.mozilla.org/media/img/logos/firefox/logo-quantum-wordmark-white.bd1944395fb6.png')"
+        >
+          B
+        </button> -->
+
+        <div class="wrap">
+          <!-- <div class="left"> -->
+          <form id="input_form" enctype="multipart/form-data">
+            <div class="input_area">
+              <!-- <p>Drag and drop a file or click</p> -->
+              <input
+                id="input_img"
+                class="input_file"
+                type="file"
+                name="file"
+              />
+            </div>
+          </form>
+        </div>
+
+        <button id="btn_upload">アップロード</button>
+
+        <!-- <button onclick="load_img(this)">C</button><br /> -->
+        <input
+          id="scal"
+          type="range"
+          value=""
+          min="10"
+          max="600"
+          oninput="scaling(value)"
+          style="width: 600px"
+        /><br />
+        <canvas id="cvs" width="1000" height="1000"></canvas><br />
+        <button onclick="crop_img()">CROP</button><br />
+        <canvas id="out" width="800" height="800"></canvas><br />
+        <a
+          href=""
+          download
+          onclick="event.target.href = document.getElementById( 'out' ).toDataURL()"
+          >Download</a
+        ><br />
+        <script>
+          const cvs = document.getElementById("cvs");
+          const cw = cvs.width;
+          const ch = cvs.height;
+          const out = document.getElementById("out");
+          const oh = out.height;
+          const ow = out.width;
+
+          let ix = 0; // 中心座標
+          let iy = 0;
+          let v = 1.0; // 拡大縮小率
+          const img = new Image();
+          img.crossOrigin = "Anonymous"; // 参照： https://developer.mozilla.org/ja/docs/Web/HTML/CORS_enabled_image
+          img.onload = function (_ev) {
+            // 画像が読み込まれた
+            ix = img.width / 2;
+            iy = img.height / 2;
+            let scl = parseInt((cw / img.width) * 100);
+            document.getElementById("scal").value = scl;
+            scaling(scl);
+          };
+
+          // const selFile = document.getElementById("input_img"); // input type="file"の要素取得
+          const selFile = document.getElementById("btn_upload"); // input type="file"の要素取得
+          const c = document.getElementById("cvs"); // canvasの要素取得
+          const ctx = c.getContext("2d");
+          selFile.addEventListener(
+            "click",
+            function (evt) {
+              const file = evt.target.files; // fileの取得
+              const reader = new FileReader();
+              reader.readAsDataURL(file[0]); // fileの要素をdataURL形式で読み込む
+              // ファイルを読み込んだ時に実行する
+              reader.onload = function () {
+                const dataUrl = reader.result; // 読み込んだファイルURL
+                const img = new Image(); // 画像
+                img.src = dataUrl;
+                // 画像が読み込んだ時に実行する
+                img.onload = function () {
+                  // canvasに画像ソースを設定する
+                  ctx.drawImage(img, 0, 0);
+                };
+              };
+            },
+            false
+          );
+
+          // 画像の読み込み;
+          // function load_img(_url) {
+          //   // console.log(e.target.result);
+          //   img.src = _url
+          //     ? _url
+          //     : // : "https://1.bp.blogspot.com/-AoQB8vIvlcw/W8BOcXcEQ6I/AAAAAAABPZM/rXNbol90tXcxBZBlXsg__xix03b_F4nqwCLcBGAs/s800/pet_cat_omoi_sleep_man.png";
+          //       _url;
+          // }
+          // load_img();
+
+          // 画像更新
+          function draw_canvas(_x, _y) {
+            const ctx = cvs.getContext("2d");
+            ctx.fillStyle = "rgb(200, 200, 200)";
+            ctx.fillRect(0, 0, cw, ch); // 背景を塗る
+            ctx.drawImage(
+              img,
+              0,
+              0,
+              img.width,
+              img.height,
+              cw / 2 - _x * v,
+              ch / 2 - _y * v,
+              img.width * v,
+              img.height * v
+            );
+            ctx.strokeStyle = "rgba(200, 0, 0, 0.8)";
+            ctx.strokeRect((cw - ow) / 2, (ch - oh) / 2, ow, oh); // 赤い枠
+          }
+
+          // 画像切り取り
+          function crop_img() {
+            const ctx = out.getContext("2d");
+            ctx.fillStyle = "rgb(200, 200, 200)";
+            ctx.fillRect(0, 0, ow, oh); // 背景を塗る
+            ctx.drawImage(
+              img,
+              0,
+              0,
+              img.width,
+              img.height,
+              ow / 2 - ix * v,
+              oh / 2 - iy * v,
+              img.width * v,
+              img.height * v
+            );
+          }
+
+          let mouse_down = false; // canvas ドラッグ中フラグ
+          let sx = 0; // canvas ドラッグ開始位置
+          let sy = 0;
+          // canvas ドラッグ開始位置
+          cvs.ontouchstart = cvs.onmousedown = function (_ev) {
+            mouse_down = true;
+            sx = _ev.pageX;
+            sy = _ev.pageY;
+            return false; // イベントを伝搬しない
+          };
+          cvs.ontouchend =
+            cvs.onmouseout =
+            cvs.onmouseup =
+              function (_ev) {
+                // canvas ドラッグ終了位置
+                if (mouse_down == false) return;
+                mouse_down = false;
+                draw_canvas(
+                  (ix += (sx - _ev.pageX) / v),
+                  (iy += (sy - _ev.pageY) / v)
+                );
+                return false; // イベントを伝搬しない
+              };
+          cvs.ontouchmove = cvs.onmousemove = function (_ev) {
+            // canvas ドラッグ中
+            if (mouse_down == false) return;
+            draw_canvas(ix + (sx - _ev.pageX) / v, iy + (sy - _ev.pageY) / v);
+            return false; // イベントを伝搬しない
+          };
+          cvs.onmousewheel = function (_ev) {
+            // canvas ホイールで拡大縮小
+            let scl = parseInt(
+              parseInt(document.getElementById("scal").value) +
+                _ev.wheelDelta * 0.05
+            );
+            if (scl < 10) scl = 10;
+            if (scl > 400) scl = 400;
+            document.getElementById("scal").value = scl;
+            scaling(scl);
+            return false; // イベントを伝搬しない
+          };
+        </script>
+      </main>
+    </div>
+  </body>
+</html>
